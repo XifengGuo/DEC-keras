@@ -1,0 +1,19 @@
+# ignore auto generated (by pycharm) folder '.idea/'
+.idea/
+
+# ignore data set
+/data/usps/*
+!/data/usps/download_usps.sh
+/data/reuters/*
+!/data/reuters/get_data.sh
+
+# weights file
+/ae_weights/
+
+# ignore the results of running code 'results/'
+/results/
+
+# ignore others
+*.h5
+*.pyc
+*.png
