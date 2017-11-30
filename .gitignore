@@ -2,13 +2,10 @@
 .idea/
 
 # ignore data set
-/data/usps/*
+data/*/*
 !/data/usps/download_usps.sh
-/data/reuters/*
 !/data/reuters/get_data.sh
-
-# weights file
-/ae_weights/
+!/data/stl/get_data.sh
 
 # ignore the results of running code 'results/'
 /results/

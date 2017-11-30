@@ -95,18 +95,18 @@ class SAE(object):
         """
         features = x
         for i in range(self.n_stacks):
-            print 'Pretraining the %dth layer...' % (i+1)
+            print('Pretraining the %dth layer...' % (i+1))
             for j in range(3):  # learning rate multiplies 0.1 every 'epochs/3' epochs
-                print 'learning rate =', pow(10, -1-j)
+                print('learning rate =', pow(10, -1-j))
                 self.stacks[i].compile(optimizer=SGD(pow(10, -1-j), momentum=0.9), loss='mse')
                 self.stacks[i].fit(features, features, batch_size=self.batch_size, epochs=epochs/3)
-            print 'The %dth layer has been pretrained.' % (i+1)
+            print('The %dth layer has been pretrained.' % (i+1))
 
             # update features to the inputs of the next layer
             feature_model = Model(inputs=self.stacks[i].input, outputs=self.stacks[i].get_layer('encoder_%d'%i).output)
             features = feature_model.predict(features)
 
-    def pretrain_autoencoders(self, x, epochs=500):
+    def pretrain_autoencoders(self, x, y, epochs=500):
         """
         Fine tune autoendoers end-to-end after layer-wise pretraining using 'pretrain_stacks()'
         Use SGD with learning rate = 0.1, decayed 10 times every 80 epochs
@@ -115,23 +115,42 @@ class SAE(object):
         :param epochs: training epochs
         :return: 
         """
-        print 'Copying layer-wise pretrained weights to deep autoencoders'
+        print('Copying layer-wise pretrained weights to deep autoencoders')
         for i in range(self.n_stacks):
             name = 'encoder_%d' % i
             self.autoencoders.get_layer(name).set_weights(self.stacks[i].get_layer(name).get_weights())
             name = 'decoder_%d' % i
             self.autoencoders.get_layer(name).set_weights(self.stacks[i].get_layer(name).get_weights())
 
-        print 'Fine-tuning autoencoder end-to-end'
-        for j in range(epochs/80):
-            lr = 0.1*pow(10, -j)
-            print 'learning rate =', lr
-            self.autoencoders.compile(optimizer=SGD(lr, momentum=0.9), loss='mse')
-            self.autoencoders.fit(x=x, y=x, batch_size=self.batch_size, epochs=80)
+        print('Fine-tuning autoencoder end-to-end')
+        # for j in range(epochs/80):
+        #     lr = 0.1*pow(10, -j)
+        #     print('learning rate =', lr)
+        #     self.autoencoders.compile(optimizer=SGD(lr, momentum=0.9), loss='mse')
+        #     self.autoencoders.fit(x=x, y=x, batch_size=self.batch_size, epochs=80)
+        self.autoencoders.compile(optimizer='adam', loss='mse')
+        from keras.callbacks import Callback
+        class cluster_ACC(Callback):
+            def __init__(self, x, y):
+                self.x = x[:5000]
+                self.y = y[:5000]
+                super(cluster_ACC, self).__init__()
+            def on_epoch_end(self, epoch, logs):
+                feature_model = Model(self.model.input, self.model.get_layer('encoder_3').output)
+                features = feature_model.predict(self.x)
+                from sklearn.cluster import KMeans
+                import numpy as np
+                km = KMeans(n_clusters=len(np.unique(self.y)), n_init=20, n_jobs=4)
+                y_pred = km.fit_predict(features)
+                from DEC import cluster_acc
+                print('  acc:', cluster_acc(self.y, y_pred))
+        acc_callback = cluster_ACC(x, y)
+        self.autoencoders.fit(x=x, y=x, batch_size=self.batch_size, epochs=epochs,
+                              callbacks=[acc_callback])
 
-    def fit(self, x, epochs=200):
-        self.pretrain_stacks(x, epochs=epochs/2)
-        self.pretrain_autoencoders(x, epochs=epochs)
+    def fit(self, x, y, epochs=200):
+        # self.pretrain_stacks(x, epochs=int(epochs/10))
+        self.pretrain_autoencoders(x, y, epochs=epochs)
 
     def extract_feature(self, x):
         """
@@ -161,7 +180,7 @@ if __name__ == "__main__":
         y = np.concatenate((y_train, y_test))
         x = x.reshape((x.shape[0], -1))
         x = np.divide(x, 50.)  # normalize as it does in DEC paper
-        print 'MNIST samples', x.shape
+        print('MNIST samples', x.shape)
         return x, y
 
     db = 'mnist'
@@ -174,13 +193,13 @@ if __name__ == "__main__":
     sae.autoencoders.save_weights('weights_%s.h5' % db)
 
     # extract features
-    print 'Finished training, extracting features using the trained SAE model'
+    print('Finished training, extracting features using the trained SAE model')
     features = sae.extract_feature(x)
 
-    print 'performing k-means clustering on the extracted features'
+    print('performing k-means clustering on the extracted features')
     from sklearn.cluster import KMeans
     km = KMeans(n_clusters, n_init=20)
     y_pred = km.fit_predict(features)
 
     from sklearn.metrics import normalized_mutual_info_score as nmi
-    print 'K-means clustering result on extracted features: NMI =', nmi(y, y_pred)
+    print('K-means clustering result on extracted features: NMI =', nmi(y, y_pred))

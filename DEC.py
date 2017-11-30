@@ -10,6 +10,14 @@ Usage:
         python DEC.py usps --update_interval 30 --ae_weights ./ae_weights/usps_ae_weights.h5
         python DEC.py reutersidf10k --n_clusters 4 --update_interval 20 --ae_weights ./ae_weights/reutersidf10k_ae_weights.h5
 
+Result:
+----------------------------------------------------------------
+            MNIST     FMNIST       USPS       pendigits    Reuters10k
+----------------------------------------------------------------
+Pretrain  0.82(0.75)  0.51(0.56)  0.71(0.69)   0.77(0.70)  0.66-0.81(0.46-0.57)
+Final     0.88(0.86)  0.54(0.59)  0.76(0.78)               0.67-0.82(0.50-0.61)
+----------------------------------------------------------------
+where 0.82(0.75) represents ACC(NMI). The performance for Reuters10k is not very stable.
 Author:
     Xifeng Guo. 2017.1.30
 """
@@ -22,7 +30,7 @@ from keras.layers import Dense, Input
 from keras.models import Model
 from keras.optimizers import SGD
 from keras.utils.vis_utils import plot_model
-
+from keras.callbacks import Callback
 from sklearn.cluster import KMeans
 from sklearn import metrics
 
@@ -47,6 +55,22 @@ def cluster_acc(y_true, y_pred):
     from sklearn.utils.linear_assignment_ import linear_assignment
     ind = linear_assignment(w.max() - w)
     return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size
+
+
+class PrintACC(Callback):
+    def __init__(self, x, y):
+        self.x = x[:max(5000, x.shape[0])]
+        self.y = y[:max(5000, x.shape[0])]
+        super(PrintACC, self).__init__()
+
+    def on_epoch_end(self, epoch, logs=None):
+        feature_model = Model(self.model.input,
+                              self.model.get_layer('encoder_%d' % (int(len(self.model.layers)/2) - 1)).output)
+        features = feature_model.predict(self.x)
+        km = KMeans(n_clusters=len(np.unique(self.y)), n_init=20, n_jobs=4)
+        y_pred = km.fit_predict(features)
+        print('  acc: %.4f,  nmi: %.4f'
+              % (cluster_acc(self.y, y_pred), metrics.normalized_mutual_info_score(self.y, y_pred)))
 
 
 def autoencoder(dims, act='relu'):
@@ -160,17 +184,21 @@ class DEC(object):
         self.batch_size = batch_size
         self.autoencoder = autoencoder(self.dims)
 
-    def initialize_model(self, optimizer, ae_weights=None, x=None):
+    def initialize_model(self, optimizer, pretrain_epochs, ae_weights=None, x=None, y=None):
         if ae_weights is not None:  # load pretrained weights of autoencoder
             self.autoencoder.load_weights(ae_weights)
         else:
-            print 'No pretrained ae_weights given, start pretraining...'
-            from SAE import SAE
-            sae = SAE(dims=self.dims)
-            sae.fit(x, epochs=400)
-            sae.autoencoders.save_weights('ae_weights.h5')
-            print 'Pretrained AE weights saved to \'./ae_weights.h5\''
-            self.autoencoder.set_weights(sae.autoencoders.get_weights())
+            print('No pretrained ae_weights given, start pretraining...')
+            # from SAE import SAE
+            # sae = SAE(dims=self.dims)
+            printacc = PrintACC(x, y)
+            self.autoencoder.compile('adam', 'mse')
+            self.autoencoder.fit(x, x, epochs=pretrain_epochs, batch_size=256,
+                                 callbacks=[printacc])
+            self.autoencoder.save_weights('ae_weights.h5')
+
+            print('Pretrained AE weights saved to \'./ae_weights.h5\'')
+            # self.autoencoder.set_weights(sae.autoencoders.get_weights())
 
         hidden = self.autoencoder.get_layer(name='encoder_%d' % (self.n_stacks - 1)).output
         self.encoder = Model(inputs=self.autoencoder.input, outputs=hidden)
@@ -202,12 +230,12 @@ class DEC(object):
                    maxiter=2e4,
                    save_dir='./results/dec'):
 
-        print 'Update interval', update_interval
+        print('Update interval', update_interval)
         save_interval = x.shape[0] / self.batch_size * 5  # 5 epochs
-        print 'Save interval', save_interval
+        print('Save interval', save_interval)
 
         # initialize cluster centers using k-means
-        print 'Initializing cluster centers with k-means.'
+        print('Initializing cluster centers with k-means.')
         kmeans = KMeans(n_clusters=self.n_clusters, n_init=20)
         y_pred = kmeans.fit_predict(self.encoder.predict(x))
         y_pred_last = y_pred
@@ -218,7 +246,7 @@ class DEC(object):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        logfile = file(save_dir + '/dec_log.csv', 'wb')
+        logfile = open(save_dir + '/dec_log.csv', 'w')
         logwriter = csv.DictWriter(logfile, fieldnames=['iter', 'acc', 'nmi', 'ari', 'L'])
         logwriter.writeheader()
 
@@ -240,12 +268,12 @@ class DEC(object):
                     loss = np.round(loss, 5)
                     logdict = dict(iter=ite, acc=acc, nmi=nmi, ari=ari, L=loss)
                     logwriter.writerow(logdict)
-                    print 'Iter', ite, ': Acc', acc, ', nmi', nmi, ', ari', ari, '; loss=', loss
+                    print('Iter %d: acc = %.5f, nmi = %.5f, ari = %.5f' % (ite, acc, nmi, ari), ' ; loss=', loss)
 
                 # check stop criterion
                 if ite > 0 and delta_label < tol:
-                    print 'delta_label ', delta_label, '< tol ', tol
-                    print 'Reached tolerance threshold. Stopping training.'
+                    print('delta_label ', delta_label, '< tol ', tol)
+                    print('Reached tolerance threshold. Stopping training.')
                     logfile.close()
                     break
 
@@ -262,14 +290,14 @@ class DEC(object):
             # save intermediate model
             if ite % save_interval == 0:
                 # save IDEC model checkpoints
-                print 'saving model to:', save_dir + '/DEC_model_' + str(ite) + '.h5'
+                print('saving model to:', save_dir + '/DEC_model_' + str(ite) + '.h5')
                 self.model.save_weights(save_dir + '/DEC_model_' + str(ite) + '.h5')
 
             ite += 1
 
         # save the trained model
         logfile.close()
-        print 'saving model to:', save_dir + '/DEC_model_final.h5'
+        print('saving model to:', save_dir + '/DEC_model_final.h5')
         self.model.save_weights(save_dir + '/DEC_model_final.h5')
 
         return y_pred
@@ -281,38 +309,59 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='train',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('dataset', default='mnist', choices=['mnist', 'usps', 'reutersidf10k'])
-    parser.add_argument('--n_clusters', default=10, type=int)
+    parser.add_argument('dataset', default='mnist',
+                        choices=['mnist', 'fmnist', 'usps', 'pendigits', 'reuters10k', 'stl'])
     parser.add_argument('--batch_size', default=256, type=int)
     parser.add_argument('--maxiter', default=2e4, type=int)
-    parser.add_argument('--gamma', default=0.1, type=float,
-                        help='coefficient of clustering loss')
-    parser.add_argument('--update_interval', default=140, type=int)
+    parser.add_argument('--pretrain_epochs', default=None, type=int)
+    parser.add_argument('--update_interval', default=None, type=int)
     parser.add_argument('--tol', default=0.001, type=float)
     parser.add_argument('--ae_weights', default=None)
+    parser.add_argument('--verbose', default=1, type=int)
     parser.add_argument('--save_dir', default='results')
     args = parser.parse_args()
-    print args
+    print(args)
 
     # load dataset
-    from datasets import load_mnist, load_reuters, load_usps
-    if args.dataset == 'mnist':  # recommends: n_clusters=10, update_interval=140
-        x, y = load_mnist()
-    elif args.dataset == 'usps':  # recommends: n_clusters=10, update_interval=30
-        x, y = load_usps('data/usps')
-    elif args.dataset == 'reutersidf10k':  # recommends: n_clusters=4, update_interval=20
-        x, y = load_reuters('data/reuters')
+    from datasets import load_data
+    x, y = load_data(args.dataset)
+    n_clusters = len(np.unique(y))
+
+    # setting parameters
+    if args.dataset == 'mnist':
+        update_interval = 140
+        pretrain_epochs = 60
+    elif args.dataset == 'fmnist':
+        update_interval = 140
+        pretrain_epochs = 5
+    elif args.dataset == 'usps':
+        update_interval = 30
+        pretrain_epochs = 60
+    elif args.dataset == 'pendigits':
+        update_interval = 30
+        pretrain_epochs = 100
+    elif args.dataset == 'reuters10k':
+        update_interval = 30
+        pretrain_epochs = 5
+    elif args.dataset == 'stl':
+        update_interval = 30
+        pretrain_epochs = 10
+
+    if args.update_interval is not None:
+        update_interval = args.update_interval
+    if args.pretrain_epochs is not None:
+        pretrain_epochs = args.pretrain_epochs
 
     # prepare the DEC model
-    dec = DEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=args.n_clusters, batch_size=args.batch_size)
+    dec = DEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=n_clusters, batch_size=args.batch_size)
 
-    dec.initialize_model(optimizer=SGD(lr=0.01, momentum=0.9),
+    dec.initialize_model(optimizer=SGD(lr=0.01, momentum=0.9), pretrain_epochs=pretrain_epochs,
                          ae_weights=args.ae_weights,
-                         x=x)
+                         x=x, y=y)
     plot_model(dec.model, to_file='dec_model.png', show_shapes=True)
     dec.model.summary()
     t0 = time()
     y_pred = dec.clustering(x, y=y, tol=args.tol, maxiter=args.maxiter,
-                            update_interval=args.update_interval, save_dir=args.save_dir)
-    print 'acc:', cluster_acc(y, y_pred)
-    print 'clustering time: ', (time() - t0)
+                            update_interval=update_interval, save_dir=args.save_dir)
+    print('acc:', cluster_acc(y, y_pred))
+    print('clustering time: ', (time() - t0))
