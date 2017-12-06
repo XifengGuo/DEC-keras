@@ -14,5 +14,4 @@ data/*/*
 # ignore others
 *.h5
 *.pyc
-*.png
 SAE.py
