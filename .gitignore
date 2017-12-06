@@ -8,10 +8,13 @@ data/*/*
 !/data/stl/get_data.sh
 
 # ignore the results of running code 'results/'
-/results/
+results/*/*
+results/*.csv
 !/results/exp1/results.csv
 
 # ignore others
 *.h5
 *.pyc
+
 SAE.py
+
