@@ -9,8 +9,10 @@ data/*/*
 
 # ignore the results of running code 'results/'
 /results/
+!/results/exp1/results.csv
 
 # ignore others
 *.h5
 *.pyc
 *.png
+SAE.py
