@@ -49,8 +49,8 @@ Table 1. Mean performance over 10 trials. See [results.csv](./results/exp1/resul
    :--------|:---:|:----:|:-------:|:-----:|----:
    |mnist   | acc | 53   | 88      | 91    | 84 
    |        | nmi | 50   | 81      | 87    | --
-   |fmnist  | acc | 47   | 57      | 58    | --
-   |        | nmi | 51   | 62      | 63    | --
+   |fmnist  | acc | 47   | 61      | 62    | --
+   |        | nmi | 51   | 64      | 65    | --
    |usps    | acc | 67   | 71      | 76    | --
    |        | nmi | 63   | 68      | 79    | --
    |stl     | acc | 70   | 79      | 86    | --
