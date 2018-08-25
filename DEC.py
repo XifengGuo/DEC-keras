@@ -152,7 +152,7 @@ class DEC(object):
                     super(PrintACC, self).__init__()
 
                 def on_epoch_end(self, epoch, logs=None):
-                    if epoch % int(epochs/10) != 0:
+                    if int(epochs/10) != 0 and epoch % int(epochs/10) != 0:
                         return
                     feature_model = Model(self.model.input,
                                           self.model.get_layer(
@@ -169,7 +169,7 @@ class DEC(object):
         # begin pretraining
         t0 = time()
         self.autoencoder.fit(x, x, batch_size=batch_size, epochs=epochs, callbacks=cb)
-        print('Pretraining time: ', time() - t0)
+        print('Pretraining time: %ds' % round(time() - t0))
         self.autoencoder.save_weights(save_dir + '/ae_weights.h5')
         print('Pretrained weights are saved to %s/ae_weights.h5' % save_dir)
         self.pretrained = True
@@ -196,7 +196,7 @@ class DEC(object):
             update_interval=140, save_dir='./results/temp'):
 
         print('Update interval', update_interval)
-        save_interval = x.shape[0] / batch_size * 5  # 5 epochs
+        save_interval = int(x.shape[0] / batch_size) * 5  # 5 epochs
         print('Save interval', save_interval)
 
         # Step 1: initialize cluster centers using k-means
@@ -246,7 +246,7 @@ class DEC(object):
             # if index == 0:
             #     np.random.shuffle(index_array)
             idx = index_array[index * batch_size: min((index+1) * batch_size, x.shape[0])]
-            self.model.train_on_batch(x=x[idx], y=p[idx])
+            loss = self.model.train_on_batch(x=x[idx], y=p[idx])
             index = index + 1 if (index + 1) * batch_size <= x.shape[0] else 0
 
             # save intermediate model
