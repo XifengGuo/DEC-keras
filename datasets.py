@@ -179,7 +179,7 @@ def load_reuters(data_path='./data/reuters'):
         print('making reuters idf features')
         make_reuters_data(data_path)
         print(('reutersidf saved to ' + data_path))
-    data = np.load(os.path.join(data_path, 'reutersidf10k.npy')).item()
+    data = np.load(os.path.join(data_path, 'reutersidf10k.npy'), allow_pickle=True).item()
     # has been shuffled
     x = data['data']
     y = data['label']

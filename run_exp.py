@@ -1,8 +1,7 @@
 from DEC import DEC
 import os, csv
-import datasets
-from keras.optimizers import SGD
-from keras.initializers import VarianceScaling
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.initializers import VarianceScaling
 import numpy as np
 
 expdir='./results/exp1'
@@ -34,13 +33,13 @@ for db in ['usps', 'reuters10k', 'stl', 'mnist', 'fmnist']:
         pretrain_epochs = 300
         init = VarianceScaling(scale=1. / 3., mode='fan_in',
                                distribution='uniform')  # [-limit, limit], limit=sqrt(1./fan_in)
-        pretrain_optimizer = SGD(lr=1, momentum=0.9)
+        pretrain_optimizer = SGD(learning_rate=1, momentum=0.9)
     elif db == 'reuters10k':
         update_interval = 30
         pretrain_epochs = 50
         init = VarianceScaling(scale=1. / 3., mode='fan_in',
                                distribution='uniform')  # [-limit, limit], limit=sqrt(1./fan_in)
-        pretrain_optimizer = SGD(lr=1, momentum=0.9)
+        pretrain_optimizer = SGD(learning_rate=1, momentum=0.9)
     elif db == 'usps':
         update_interval = 30
         pretrain_epochs = 50
