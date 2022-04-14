@@ -12,11 +12,11 @@ Author:
 
 from time import time
 import numpy as np
-import keras.backend as K
-from keras.layers import Layer, InputSpec, Dense, Input
-from keras.models import Model
+import tensorflow.keras.backend as K
+from tensorflow.keras.layers import Layer, InputSpec, Dense, Input
+from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import SGD
-from keras import callbacks
+from tensorflow.keras import callbacks
 from tensorflow.keras.initializers import VarianceScaling
 from sklearn.cluster import KMeans
 import metrics
