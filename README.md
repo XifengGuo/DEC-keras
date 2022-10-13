@@ -4,6 +4,7 @@ Keras implementation for ICML-2016 paper:
 
 * Junyuan Xie, Ross Girshick, and Ali Farhadi. Unsupervised deep embedding for clustering analysis. ICML 2016.
 
+
 ## Usage
 1. Install [Keras>=2.0.9](https://github.com/fchollet/keras), scikit-learn  
 ```
@@ -28,10 +29,16 @@ cd ../..
 https://pan.baidu.com/s/1hsMQ8Tm (password: `4ss4`) for **Reuters**, and  
 https://pan.baidu.com/s/1skRg9Dr (password: `sc58`) for **USPS**
 
+Any **Custom** dataset can be provided as a local path in the datasets.py file.
 
-4. Run experiment on MNIST.   
+
+4. a. Run experiment on MNIST.   
 `python DEC.py --dataset mnist`   
 or (if there's pretrained autoencoder weights)  
+`python DEC.py --dataset custom --ae_weights ae_weights.h5` 
+ b. Run experiment on CUSTOM dataset.   
+`python DEC.py --dataset custom`
+
 The DEC model will be saved to "results/DEC_model_final.h5".
 
 5. Other usages.   
@@ -57,7 +64,6 @@ Table 1. Mean performance over 10 trials. See [results.csv](./results/exp1/resul
    |        | nmi | 71   | 72      | 82    | --
    |reuters | acc | 52   | 76      | 78    | 72
    |        | nmi | 31   | 52      | 57    | --
-
 
 ## Autoencoder model
 
