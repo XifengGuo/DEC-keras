@@ -1,8 +1,7 @@
 from DEC import DEC
 import os, csv
-import datasets
-from keras.optimizers import SGD
-from keras.initializers import VarianceScaling
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.initializers import VarianceScaling
 import numpy as np
 
 expdir='./results/exp1'
@@ -14,7 +13,7 @@ logwriter = csv.DictWriter(logfile, fieldnames=['trials', 'acc', 'nmi', 'ari'])
 logwriter.writeheader()
 
 trials=10
-for db in ['usps', 'reuters10k', 'stl', 'mnist', 'fmnist']:
+for db in ['usps', 'reuters10k', 'stl', 'mnist', 'fmnist', 'custom']:
     logwriter.writerow(dict(trials=db, acc='', nmi='', ari=''))
     save_db_dir = os.path.join(expdir, db)
     if not os.path.exists(save_db_dir):
@@ -24,7 +23,7 @@ for db in ['usps', 'reuters10k', 'stl', 'mnist', 'fmnist']:
     from datasets import load_data
 
     x, y = load_data(db)
-    n_clusters = len(np.unique(y))
+    n_clusters = 5
 
     init = 'glorot_uniform'
     pretrain_optimizer = 'adam'
@@ -34,13 +33,13 @@ for db in ['usps', 'reuters10k', 'stl', 'mnist', 'fmnist']:
         pretrain_epochs = 300
         init = VarianceScaling(scale=1. / 3., mode='fan_in',
                                distribution='uniform')  # [-limit, limit], limit=sqrt(1./fan_in)
-        pretrain_optimizer = SGD(lr=1, momentum=0.9)
-    elif db == 'reuters10k':
+        pretrain_optimizer = SGD(learning_rate=1, momentum=0.9)
+    elif db == 'reuters10k' or db == 'custom':
         update_interval = 30
         pretrain_epochs = 50
         init = VarianceScaling(scale=1. / 3., mode='fan_in',
                                distribution='uniform')  # [-limit, limit], limit=sqrt(1./fan_in)
-        pretrain_optimizer = SGD(lr=1, momentum=0.9)
+        pretrain_optimizer = SGD(learning_rate=1, momentum=0.9)
     elif db == 'usps':
         update_interval = 30
         pretrain_epochs = 50
@@ -61,7 +60,7 @@ for db in ['usps', 'reuters10k', 'stl', 'mnist', 'fmnist']:
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
 
-        dec = DEC(dims=[x.shape[-1], 500, 500, 2000, 10], n_clusters=n_clusters, init=init)
+        dec = DEC(dims=[x.shape[-1], 500, 500, 2000, 5], n_clusters=n_clusters, init=init)
         dec.pretrain(x=x, y=y, optimizer=pretrain_optimizer,
                      epochs=pretrain_epochs,
                      save_dir=save_dir)

@@ -1,10 +1,12 @@
 import numpy as np
+import pdb
+from PIL import Image
 
 
 def extract_vgg16_features(x):
-    from keras.preprocessing.image import img_to_array, array_to_img
-    from keras.applications.vgg16 import preprocess_input, VGG16
-    from keras.models import Model
+    from tensorflow.keras.preprocessing.image import img_to_array, array_to_img
+    from tensorflow.keras.applications.vgg16 import preprocess_input, VGG16
+    from tensorflow.keras.models import Model
 
     # im_h = x.shape[1]
     im_h = 224
@@ -93,7 +95,7 @@ def make_reuters_data(data_dir):
 
 def load_mnist():
     # the data, shuffled and split between train and test sets
-    from keras.datasets import mnist
+    from tensorflow.keras.datasets import mnist
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x = np.concatenate((x_train, x_test))
     y = np.concatenate((y_train, y_test))
@@ -102,9 +104,19 @@ def load_mnist():
     print('MNIST samples', x.shape)
     return x, y
 
+def load_custom():
+    # the data, shuffled and split between train and test sets
+    import glob
+    filelist = glob.glob('/path/to/dataset')
+    x = np.array([np.array(Image.open(fname).resize((100,100), Image.ANTIALIAS), dtype=object) for fname in filelist], dtype=object)
+    x = x.reshape((x.shape[0], -1))
+    x = np.divide(x, 255.).astype('float32')
+    x = np.nan_to_num(x)
+    print('Custom samples', x.shape)
+    return x, None
 
 def load_fashion_mnist():
-    from keras.datasets import fashion_mnist  # this requires keras>=2.0.9
+    from tensorflow.keras.datasets import fashion_mnist  # this requires keras>=2.0.9
     (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
     x = np.concatenate((x_train, x_test))
     y = np.concatenate((y_train, y_test))
@@ -179,7 +191,7 @@ def load_reuters(data_path='./data/reuters'):
         print('making reuters idf features')
         make_reuters_data(data_path)
         print(('reutersidf saved to ' + data_path))
-    data = np.load(os.path.join(data_path, 'reutersidf10k.npy')).item()
+    data = np.load(os.path.join(data_path, 'reutersidf10k.npy'), allow_pickle=True).item()
     # has been shuffled
     x = data['data']
     y = data['label']
@@ -190,8 +202,8 @@ def load_reuters(data_path='./data/reuters'):
 
 
 def load_retures_keras():
-    from keras.preprocessing.text import Tokenizer
-    from keras.datasets import reuters
+    from tensorflow.keras.preprocessing.text import Tokenizer
+    from tensorflow.keras.datasets import reuters
     max_words = 1000
 
     print('Loading data...')
@@ -210,8 +222,8 @@ def load_retures_keras():
 
 
 def load_imdb():
-    from keras.preprocessing.text import Tokenizer
-    from keras.datasets import imdb
+    from tensorflow.keras.preprocessing.text import Tokenizer
+    from tensorflow.keras.datasets import imdb
     max_words = 1000
 
     print('Loading data...')
@@ -246,7 +258,7 @@ def load_newsgroups():
 
 
 def load_cifar10(data_path='./data/cifar10'):
-    from keras.datasets import cifar10
+    from tensorflow.keras.datasets import cifar10
     (train_x, train_y), (test_x, test_y) = cifar10.load_data()
     x = np.concatenate((train_x, test_x))
     y = np.concatenate((train_y, test_y)).reshape((60000,))
@@ -312,6 +324,8 @@ def load_stl(data_path='./data/stl'):
 def load_data(dataset_name):
     if dataset_name == 'mnist':
         return load_mnist()
+    elif dataset_name == 'custom':
+        return load_custom()
     elif dataset_name == 'fmnist':
         return load_fashion_mnist()
     elif dataset_name == 'usps':
@@ -325,3 +339,4 @@ def load_data(dataset_name):
     else:
         print('Not defined for loading', dataset_name)
         exit(0)
+        
