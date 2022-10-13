@@ -4,9 +4,6 @@ Keras implementation for ICML-2016 paper:
 
 * Junyuan Xie, Ross Girshick, and Ali Farhadi. Unsupervised deep embedding for clustering analysis. ICML 2016.
 
-This repo has been modiifed to use custom datasets as well. 
-As an example the Vectorization roof dataset(https://github.com/SimonHensel/Vectorization-Roof-Data-Set)
-has been used here.
 
 ## Usage
 1. Install [Keras>=2.0.9](https://github.com/fchollet/keras), scikit-learn  
@@ -15,7 +12,7 @@ pip install keras scikit-learn
 ```
 2. Clone the code to local.   
 ```
-git clone https://github.com/guneetmutreja/DEC-keras.git DEC
+git clone https://github.com/XifengGuo/DEC-keras.git DEC
 cd DEC
 ```
 3. Prepare datasets.    
@@ -35,10 +32,12 @@ https://pan.baidu.com/s/1skRg9Dr (password: `sc58`) for **USPS**
 Any **Custom** dataset can be provided as a local path in the datasets.py file.
 
 
-4. Run experiment on CUSTOM.   
-`python DEC.py --dataset custom`   
+4. a. Run experiment on MNIST.   
+`python DEC.py --dataset mnist`   
 or (if there's pretrained autoencoder weights)  
 `python DEC.py --dataset custom --ae_weights ae_weights.h5` 
+ b. Run experiment on CUSTOM dataset.   
+`python DEC.py --dataset custom`
 
 The DEC model will be saved to "results/DEC_model_final.h5".
 
@@ -46,7 +45,25 @@ The DEC model will be saved to "results/DEC_model_final.h5".
 
 Use `python DEC.py -h` for help.
 
+## Results
 
+```
+python run_exp.py
+```
+Table 1. Mean performance over 10 trials. See [results.csv](./results/exp1/results.csv) for detailed results for each trial.  
+
+   |        |     |kmeans|AE+kmeans|  DEC  |  paper    
+   :--------|:---:|:----:|:-------:|:-----:|----:
+   |mnist   | acc | 53   | 88      | 91    | 84 
+   |        | nmi | 50   | 81      | 87    | --
+   |fmnist  | acc | 47   | 61      | 62    | --
+   |        | nmi | 51   | 64      | 65    | --
+   |usps    | acc | 67   | 71      | 76    | --
+   |        | nmi | 63   | 68      | 79    | --
+   |stl     | acc | 70   | 79      | 86    | --
+   |        | nmi | 71   | 72      | 82    | --
+   |reuters | acc | 52   | 76      | 78    | 72
+   |        | nmi | 31   | 52      | 57    | --
 
 ## Autoencoder model
 
